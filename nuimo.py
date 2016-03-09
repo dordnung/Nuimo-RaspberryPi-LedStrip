@@ -6,6 +6,7 @@ import struct
 import sys
 import time
 import pigpio
+from LedMatrixString import LedMatrixString
 if sys.version_info >= (3, 0):
     from functools import reduce
 
@@ -15,23 +16,71 @@ if sys.version_info >= (3, 0):
 # The Pins. Use Broadcom numbers.
 RED_PIN   = 17
 GREEN_PIN = 22
-BLUE_PIN  = 24
+BLUE_PIN  = 27
 
 class Strip():
-    def __init__(self):
+
+    def __init__(self, pi):
+        self.pi = pi
+        self.isEnabled = False
+        self.color = 0
         self.r = 0
         self.g = 0
         self.b = 0
         self.a = 255
 
+    def turnOff(self):
+        self.setLights(0, 0, 0, 0)
+
+    def setLights(self, red, green, blue, brightness):
+        realBrightness = float(brightness) / 255.0
+
+        self.pi.set_PWM_dutycycle(RED_PIN, red * realBrightness)
+        self.pi.set_PWM_dutycycle(GREEN_PIN, green * realBrightness)
+        self.pi.set_PWM_dutycycle(BLUE_PIN, blue * realBrightness)
+
+    def updateColor(self, color, value):
+        color += (value / 5)
+        
+        if color > 255:
+            return 255
+        if color < 0:
+            return 0
+            
+        return color
+
+    def setColorValue(self, value):
+        if self.color == 0:
+            self.r = self.updateColor(self.r, value)
+
+        if self.color == 1:
+            self.g = self.updateColor(self.g, value)
+
+        if self.color == 2:
+            self.b = self.updateColor(self.b, value)
+
+        if self.color == 3:
+            self.a = self.updateColor(self.a, value)
+         
+        self.setLights(self.r, self.g, self.b, self.a)
+
+    def switch(self,):
+        if self.isEnabled:
+            self.turnOff()
+        else:
+            self.setLights(self.r, self.g, self.b, self.a)
+
+        self.isEnabled = not self.isEnabled
+
+
 
 class NuimoDelegate(DefaultDelegate):
 
-    def __init__(self, nuimo, ledStrings):
+    def __init__(self, nuimo, strip):
         DefaultDelegate.__init__(self)
         self.nuimo = nuimo
-        self.ledStrings = ledStrings
-        self.color = 0
+        self.ledStrings = LedMatrixString()
+        self.strip = strip
 
     def handleNotification(self, cHandle, data):
         if int(cHandle) == self.nuimo.characteristicValueHandles['BATTERY']:
@@ -48,42 +97,33 @@ class NuimoDelegate(DefaultDelegate):
         elif int(cHandle) == self.nuimo.characteristicValueHandles['BUTTON']:
             self.onButton(ord(data[0]))
 
-    def onBattery(batteryState):
+    def onBattery(self, batteryState):
         pass
 
-    def onFly(direction, value):
+    def onFly(self, direction, value):
         pass
 
-    def onSwipe(direction):
-        color = direction
+    def onSwipe(self, direction):
+        self.strip.color = direction
 
         # Swipe to choose for color to change
         if direction == 0:
-            self.nuimo.displayLedMatrix(self.ledStrings.getR(), 2)
+            self.nuimo.displayLedMatrix(self.ledStrings.getR(), 5)
         if direction == 1:
-            self.nuimo.displayLedMatrix(self.ledStrings.getG(), 2)
+            self.nuimo.displayLedMatrix(self.ledStrings.getG(), 5)
         if direction == 2:
-            self.nuimo.displayLedMatrix(self.ledStrings.getB(), 2)
+            self.nuimo.displayLedMatrix(self.ledStrings.getB(), 5)
         if direction == 3:
-            self.nuimo.displayLedMatrix(self.ledStrings.getA(), 2)
+            self.nuimo.displayLedMatrix(self.ledStrings.getA(), 5)
 
-    def onRotate(value):
-        if direction == 0:
-            self.nuimo.displayLedMatrix(self.ledStrings.getR(), 2)
-        if direction == 1:
-            self.nuimo.displayLedMatrix(self.ledStrings.getG(), 2)
-        if direction == 2:
-            self.nuimo.displayLedMatrix(self.ledStrings.getB(), 2)
-        if direction == 3:
-            self.nuimo.displayLedMatrix(self.ledStrings.getA(), 2)
+    def onRotate(self, value):
+        self.strip.setColorValue(value)
 
-    def onButton(pressState):
+    def onButton(self, pressState):
         # On press 1 and 0 will be fired on the emulator
         if pressState == 1:
             # Turn on or off
-            setLights(RED_PIN, 0)
-            setLights(GREEN_PIN, 0)
-            setLights(BLUE_PIN, 0)
+            self.strip.switch()
 
 
 class Nuimo:
@@ -140,7 +180,7 @@ class Nuimo:
         bytes = list(map(lambda leds: reduce(lambda acc, led: acc + (1 << led if leds[led] not in [' ', '0'] else 0), range(0, len(leds)), 0), [matrix[i:i+8] for i in range(0, len(matrix), 8)]))
         self.peripheral.writeCharacteristic(self.characteristicValueHandles['LED_MATRIX'], struct.pack('BBBBBBBBBBBBB', bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], max(0, min(255, int(255.0 * brightness))), max(0, min(255, int(timeout * 10.0)))), True)
 
-def connect(scanTimeout = 2, reconnectAttempts = 1, maxAttempts = 10):
+def connect(strip, scanTimeout = 2, reconnectAttempts = 1, maxAttempts = 10):
     # Max attempts reached
     if reconnectAttempts > maxAttempts:
         print("Failed to connect after %d attempts" % maxAttempts)
@@ -157,12 +197,13 @@ def connect(scanTimeout = 2, reconnectAttempts = 1, maxAttempts = 10):
             if device.connectable and device.getValueText(9) == "Nuimo":
                 # Init Nuimo class
                 nuimo = Nuimo(device.addr)
-                nuimo.set_delegate(NuimoDelegate(nuimo))
+                nuimo.set_delegate(NuimoDelegate(nuimo, strip))
 
                 # Connect to Nuimo
                 print("Trying to connect to %s." % device.addr)
 
                 nuimo.connect()
+                nuimo.displayLedMatrix(LedMatrixString().getRaspberry(), 5)
 
                 print("Connected successfully to %s." % device.addr)
                 # Reset reconnect attempts on successfull connect
@@ -174,20 +215,18 @@ def connect(scanTimeout = 2, reconnectAttempts = 1, maxAttempts = 10):
 
         # Found no Nuimo
         print("Couldn't find a Nuimo.")
-        connect(scanTimeout + 1, reconnectAttempts + 1)
+        connect(strip, scanTimeout + 1, reconnectAttempts + 1)
     except BTLEException:
         print("Failed to connect to %s. Make sure to:\n  1. Disable the Bluetooth device: hciconfig hci0 down\n  2. Enable the Bluetooth device: hciconfig hci0 up\n  3. Enable BLE: btmgmt le on\n" % nuimo.macAddress)
-        connect(scanTimeout + 1, reconnectAttempts + 1)
+        connect(strip, scanTimeout + 1, reconnectAttempts + 1)
     except KeyboardInterrupt:
         print("Program aborted.")
         return
 
 if __name__ == "__main__":
-    pi = pigpio.pi()
+    strip = Strip(pigpio.pi())
 
     print("Press Ctrl+C to cancel.")
-    connect()
+    connect(strip)
 
-    setLights(RED_PIN, 0)
-    setLights(GREEN_PIN, 0)
-    setLights(BLUE_PIN, 0)
+    strip.turnOff()

@@ -13,7 +13,7 @@ class LedMatrixString:
             "         "
 
     def getRaspberry(self):
-        ret = " **   ** " + \
+        return " **   ** " + \
               " * * * * " + \
               "  *****  " + \
               "  *   *  " + \
@@ -22,10 +22,9 @@ class LedMatrixString:
               " * * * * " + \
               "  *   *  " + \
               "   ***   "
-        return ret
 
     def getR(self):
-        ret = "         " + \
+        return "         " + \
               "   ***   " + \
               "   *  *  " + \
               "   *  *  " + \
@@ -34,10 +33,9 @@ class LedMatrixString:
               "   * *   " + \
               "   *  *  " + \
               "         "
-        return ret
 
     def getG(self):
-        ret = "         " + \
+        return "         " + \
               "    ***  " + \
               "   *     " + \
               "   *     " + \
@@ -46,10 +44,9 @@ class LedMatrixString:
               "   *  *  " + \
               "    ***  " + \
               "         "
-        return ret
 
     def getB(self):
-        ret = "         " + \
+        return "         " + \
               "   ***   " + \
               "   *  *  " + \
               "   *  *  " + \
@@ -58,10 +55,9 @@ class LedMatrixString:
               "   *  *  " + \
               "   ***   " + \
               "         "
-        return ret
 
     def getA(self):
-        ret = "         " + \
+        return "         " + \
               "    *    " + \
               "   * *   " + \
               "  *   *  " + \
@@ -70,7 +66,6 @@ class LedMatrixString:
               "  *   *  " + \
               "  *   *  " + \
               "         "
-        return ret
 
 if __name__ == "__main__":
     LMS = LedMatrixString()
