@@ -5,30 +5,85 @@ import itertools
 import struct
 import sys
 import time
+import pigpio
 if sys.version_info >= (3, 0):
     from functools import reduce
 
 
+###### CONFIGURE THIS ######
+
+# The Pins. Use Broadcom numbers.
+RED_PIN   = 17
+GREEN_PIN = 22
+BLUE_PIN  = 24
+
+class Strip():
+    def __init__(self):
+        self.r = 0
+        self.g = 0
+        self.b = 0
+        self.a = 255
+
+
 class NuimoDelegate(DefaultDelegate):
 
-    def __init__(self, nuimo):
+    def __init__(self, nuimo, ledStrings):
         DefaultDelegate.__init__(self)
         self.nuimo = nuimo
+        self.ledStrings = ledStrings
+        self.color = 0
 
     def handleNotification(self, cHandle, data):
         if int(cHandle) == self.nuimo.characteristicValueHandles['BATTERY']:
-            print('BATTERY', ord(data[0]))
+            self.onBattery(ord(data[0]))
         elif int(cHandle) == self.nuimo.characteristicValueHandles['FLY']:
-            print('FLY', ord(data[0]), ord(data[1]))
+            self.onFly(ord(data[0]), ord(data[1]))
         elif int(cHandle) == self.nuimo.characteristicValueHandles['SWIPE']:
-            print('SWIPE', ord(data[0]))
+            self.onSwipe(ord(data[0]))
         elif int(cHandle) == self.nuimo.characteristicValueHandles['ROTATION']:
             value = ord(data[0]) + (ord(data[1]) << 8)
             if value >= 1 << 15:
                 value = value - (1 << 16)
-            print('ROTATION', value)
+            self.onRotate(value)
         elif int(cHandle) == self.nuimo.characteristicValueHandles['BUTTON']:
-            print('BUTTON', ord(data[0]))
+            self.onButton(ord(data[0]))
+
+    def onBattery(batteryState):
+        pass
+
+    def onFly(direction, value):
+        pass
+
+    def onSwipe(direction):
+        color = direction
+
+        # Swipe to choose for color to change
+        if direction == 0:
+            self.nuimo.displayLedMatrix(self.ledStrings.getR(), 2)
+        if direction == 1:
+            self.nuimo.displayLedMatrix(self.ledStrings.getG(), 2)
+        if direction == 2:
+            self.nuimo.displayLedMatrix(self.ledStrings.getB(), 2)
+        if direction == 3:
+            self.nuimo.displayLedMatrix(self.ledStrings.getA(), 2)
+
+    def onRotate(value):
+        if direction == 0:
+            self.nuimo.displayLedMatrix(self.ledStrings.getR(), 2)
+        if direction == 1:
+            self.nuimo.displayLedMatrix(self.ledStrings.getG(), 2)
+        if direction == 2:
+            self.nuimo.displayLedMatrix(self.ledStrings.getB(), 2)
+        if direction == 3:
+            self.nuimo.displayLedMatrix(self.ledStrings.getA(), 2)
+
+    def onButton(pressState):
+        # On press 1 and 0 will be fired on the emulator
+        if pressState == 1:
+            # Turn on or off
+            setLights(RED_PIN, 0)
+            setLights(GREEN_PIN, 0)
+            setLights(BLUE_PIN, 0)
 
 
 class Nuimo:
@@ -85,61 +140,54 @@ class Nuimo:
         bytes = list(map(lambda leds: reduce(lambda acc, led: acc + (1 << led if leds[led] not in [' ', '0'] else 0), range(0, len(leds)), 0), [matrix[i:i+8] for i in range(0, len(matrix), 8)]))
         self.peripheral.writeCharacteristic(self.characteristicValueHandles['LED_MATRIX'], struct.pack('BBBBBBBBBBBBB', bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], max(0, min(255, int(255.0 * brightness))), max(0, min(255, int(timeout * 10.0)))), True)
 
-def connect():
-    print("Connecting... Scanning...")
-    scanner = Scanner()
-    devices = scanner.scan(2)
-    
-    if not devices:
-        print ("Found no device...")
-        sys.exit(1)
-    
-    for d in devices:
-        if d.getValueText(9) == "Nuimo":
-            nuimo = Nuimo(d.addr)
-            nuimo.set_delegate(NuimoDelegate(nuimo))
+def connect(scanTimeout = 2, reconnectAttempts = 1, maxAttempts = 10):
+    # Max attempts reached
+    if reconnectAttempts > maxAttempts:
+        print("Failed to connect after %d attempts" % maxAttempts)
+        return
 
-            # Connect to Nuimo
-            print("Trying to connect to %s. Press Ctrl+C to cancel." % d.addr)
-            try:
+    try:
+        # Scanning for devices
+        print("Scanning for devices (%d / %d)" % (reconnectAttempts, maxAttempts))
+        scanner = Scanner()
+        devices = scanner.scan(scanTimeout)
+
+        for device in devices:
+            # Only connect to Nuimos
+            if device.connectable and device.getValueText(9) == "Nuimo":
+                # Init Nuimo class
+                nuimo = Nuimo(device.addr)
+                nuimo.set_delegate(NuimoDelegate(nuimo))
+
+                # Connect to Nuimo
+                print("Trying to connect to %s." % device.addr)
+
                 nuimo.connect()
-            except BTLEException:
-                print("Failed to connect to %s. Make sure to:\n  1. Disable the Bluetooth device: hciconfig hci0 down\n  2. Enable the Bluetooth device: hciconfig hci0 up\n  3. Enable BLE: btmgmt le on\n  4. Pass the right MAC address: hcitool lescan | grep Nuimo" % nuimo.macAddress)
-                sys.exit()
-            print("Connected. Waiting for input events...")
 
-            # Display some LEDs matrices and wait for notifications
-            nuimo.displayLedMatrix(
-                "         " +
-                " ***     " +
-                " *  * *  " +
-                " *  *    " +
-                " ***  *  " +
-                " *    *  " +
-                " *    *  " +
-                " *    *  " +
-                "         ", 2.0)
-            time.sleep(2)
-            nuimo.displayLedMatrix(
-                " **   ** " +
-                " * * * * " +
-                "  *****  " +
-                "  *   *  " +
-                " * * * * " +
-                " *  *  * " +
-                " * * * * " +
-                "  *   *  " +
-                "   ***   ", 20.0)
+                print("Connected successfully to %s." % device.addr)
+                # Reset reconnect attempts on successfull connect
+                reconnectAttempts = 0
 
-            try:
                 while True:
                     nuimo.waitForNotifications()
-            except BTLEException as e:
-                if e.code == BTLEException.DISCONNECTED:
-                    print("Connection error:", e)
-                    connect()
-            except KeyboardInterrupt:
-                print("Program aborted")
+                return
+
+        # Found no Nuimo
+        print("Couldn't find a Nuimo.")
+        connect(scanTimeout + 1, reconnectAttempts + 1)
+    except BTLEException:
+        print("Failed to connect to %s. Make sure to:\n  1. Disable the Bluetooth device: hciconfig hci0 down\n  2. Enable the Bluetooth device: hciconfig hci0 up\n  3. Enable BLE: btmgmt le on\n" % nuimo.macAddress)
+        connect(scanTimeout + 1, reconnectAttempts + 1)
+    except KeyboardInterrupt:
+        print("Program aborted.")
+        return
 
 if __name__ == "__main__":
+    pi = pigpio.pi()
+
+    print("Press Ctrl+C to cancel.")
     connect()
+
+    setLights(RED_PIN, 0)
+    setLights(GREEN_PIN, 0)
+    setLights(BLUE_PIN, 0)
