@@ -79,21 +79,23 @@ class LedMatrixString:
               "         "
 
     def getOff(self):
-        return "         " + \
-              "    *    " + \
+        return "    *    " + \
+              "   * *   " + \
               "  *   *  " + \
               " *     * " + \
               "*       *" + \
               " *     * " + \
+              "  *   *  " + \
               "   * *   " + \
-              "    *    " + \
-              "         "
+              "    *    "
 
     def getColorBar(self, colorValue):
         bar = ""
-        step = 255.0 / 9.0
+        step = 255 / 9
+        start = 255 - step
+        end = 255 - 9 * step
 
-        for x in self.frange(255.0 - step, 0, step):
+        for x in xrange(start, end, -step):
             if colorValue >= x:
                 bar += "*********"
             else:
@@ -102,20 +104,6 @@ class LedMatrixString:
         # First one is always on
         bar += "*********"
         return bar
-
-    def frange(self, start, end, step):
-      if step == 0:
-          return
-
-      # xrange for floats
-      if start < end:
-          while start < end:
-              yield start
-              start += step
-      else:
-          while start > end:
-              yield start
-              start -= step
 
 if __name__ == "__main__":
     LMS = LedMatrixString()
