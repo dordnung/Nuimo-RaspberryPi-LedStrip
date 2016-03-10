@@ -14,9 +14,10 @@ if sys.version_info >= (3, 0):
 ###### CONFIGURE THIS ######
 
 # The Pins. Use Broadcom numbers.
-RED_PIN   = 17
+RED_PIN = 17
 GREEN_PIN = 22
-BLUE_PIN  = 27
+BLUE_PIN = 27
+
 
 class Strip():
 
@@ -45,13 +46,13 @@ class Strip():
     def updateColor(self, currentValue, newValue):
         # Add new value to current value
         currentValue += (newValue / 5)
-        
+
         # Shouldn't be higer then 255 or less then 0
         if currentValue > 255:
             return 255
         if currentValue < 0:
             return 0
-        
+
         return currentValue
 
     def setColorValue(self, value):
@@ -134,16 +135,20 @@ class NuimoDelegate(DefaultDelegate):
         # Swipe to choose for color to change
         if direction == 0:
             self.nuimo.displayLedMatrix(self.ledStrings.getR(), 5)
-            self.nuimo.displayLedMatrix(self.ledStrings.getColorBar(self.strip.r), 255)
+            self.nuimo.displayLedMatrix(
+                self.ledStrings.getColorBar(self.strip.r), 255)
         if direction == 1:
             self.nuimo.displayLedMatrix(self.ledStrings.getG(), 5)
-            self.nuimo.displayLedMatrix(self.ledStrings.getColorBar(self.strip.g), 255)
+            self.nuimo.displayLedMatrix(
+                self.ledStrings.getColorBar(self.strip.g), 255)
         if direction == 2:
             self.nuimo.displayLedMatrix(self.ledStrings.getB(), 5)
-            self.nuimo.displayLedMatrix(self.ledStrings.getColorBar(self.strip.b), 255)
+            self.nuimo.displayLedMatrix(
+                self.ledStrings.getColorBar(self.strip.b), 255)
         if direction == 3:
             self.nuimo.displayLedMatrix(self.ledStrings.getA(), 5)
-            self.nuimo.displayLedMatrix(self.ledStrings.getColorBar(self.strip.a), 255)
+            self.nuimo.displayLedMatrix(
+                self.ledStrings.getColorBar(self.strip.a), 255)
 
     def onRotate(self, value):
         print ('rotate', value)
@@ -166,18 +171,18 @@ class NuimoDelegate(DefaultDelegate):
 class Nuimo:
 
     SERVICE_UUIDS = [
-        UUID('0000180f-0000-1000-8000-00805f9b34fb'), # Battery
-        UUID('f29b1525-cb19-40f3-be5c-7241ecb82fd2'), # Sensors
+        UUID('0000180f-0000-1000-8000-00805f9b34fb'),  # Battery
+        UUID('f29b1525-cb19-40f3-be5c-7241ecb82fd2'),  # Sensors
         UUID('f29b1523-cb19-40f3-be5c-7241ecb82fd1')  # LED Matrix
     ]
 
     CHARACTERISTIC_UUIDS = {
-        UUID('00002a19-0000-1000-8000-00805f9b34fb') : 'BATTERY',
-        UUID('f29b1529-cb19-40f3-be5c-7241ecb82fd2') : 'BUTTON',
-        UUID('f29b1528-cb19-40f3-be5c-7241ecb82fd2') : 'ROTATION',
-        UUID('f29b1527-cb19-40f3-be5c-7241ecb82fd2') : 'SWIPE',
-        UUID('f29b1526-cb19-40f3-be5c-7241ecb82fd2') : 'FLY',
-        UUID('f29b1524-cb19-40f3-be5c-7241ecb82fd1') : 'LED_MATRIX'
+        UUID('00002a19-0000-1000-8000-00805f9b34fb'): 'BATTERY',
+        UUID('f29b1529-cb19-40f3-be5c-7241ecb82fd2'): 'BUTTON',
+        UUID('f29b1528-cb19-40f3-be5c-7241ecb82fd2'): 'ROTATION',
+        UUID('f29b1527-cb19-40f3-be5c-7241ecb82fd2'): 'SWIPE',
+        UUID('f29b1526-cb19-40f3-be5c-7241ecb82fd2'): 'FLY',
+        UUID('f29b1524-cb19-40f3-be5c-7241ecb82fd1'): 'LED_MATRIX'
     }
 
     NOTIFICATION_CHARACTERISTIC_UUIDS = [
@@ -188,7 +193,7 @@ class Nuimo:
         'FLY']
 
     # Notification data
-    NOTIFICATION_ON  = struct.pack("BB", 0x01, 0x00)
+    NOTIFICATION_ON = struct.pack("BB", 0x01, 0x00)
     NOTIFICATION_OFF = struct.pack("BB", 0x00, 0x00)
 
     def __init__(self, macAddress):
@@ -199,25 +204,32 @@ class Nuimo:
 
     def connect(self):
         self.peripheral = Peripheral(self.macAddress, addrType='random')
-        # Retrieve all characteristics from desires services and map them from their UUID
-        characteristics = list(itertools.chain(*[self.peripheral.getServiceByUUID(uuid).getCharacteristics() for uuid in Nuimo.SERVICE_UUIDS]))
+        # Retrieve all characteristics from desires services and map them from
+        # their UUID
+        characteristics = list(itertools.chain(
+            *[self.peripheral.getServiceByUUID(uuid).getCharacteristics() for uuid in Nuimo.SERVICE_UUIDS]))
         characteristics = dict((c.uuid, c) for c in characteristics)
         # Store each characteristic's value handle for each characteristic name
-        self.characteristicValueHandles = dict((name, characteristics[uuid].getHandle()) for uuid, name in Nuimo.CHARACTERISTIC_UUIDS.items())
+        self.characteristicValueHandles = dict((name, characteristics[uuid].getHandle(
+        )) for uuid, name in Nuimo.CHARACTERISTIC_UUIDS.items())
         # Subscribe for notifications
         for name in Nuimo.NOTIFICATION_CHARACTERISTIC_UUIDS:
-            self.peripheral.writeCharacteristic(self.characteristicValueHandles[name] + 1, Nuimo.NOTIFICATION_ON, True)
+            self.peripheral.writeCharacteristic(self.characteristicValueHandles[
+                                                name] + 1, Nuimo.NOTIFICATION_ON, True)
         self.peripheral.setDelegate(self.delegate)
 
     def waitForNotifications(self):
         self.peripheral.waitForNotifications(1.0)
 
-    def displayLedMatrix(self, matrix, timeout, brightness = 1.0):
+    def displayLedMatrix(self, matrix, timeout, brightness=1.0):
         matrix = '{:<81}'.format(matrix[:81])
-        bytes = list(map(lambda leds: reduce(lambda acc, led: acc + (1 << led if leds[led] not in [' ', '0'] else 0), range(0, len(leds)), 0), [matrix[i:i+8] for i in range(0, len(matrix), 8)]))
-        self.peripheral.writeCharacteristic(self.characteristicValueHandles['LED_MATRIX'], struct.pack('BBBBBBBBBBBBB', bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], max(0, min(255, int(255.0 * brightness))), max(0, min(255, int(timeout * 10.0)))), True)
+        bytes = list(map(lambda leds: reduce(lambda acc, led: acc + (1 << led if leds[led] not in [
+                     ' ', '0'] else 0), range(0, len(leds)), 0), [matrix[i:i + 8] for i in range(0, len(matrix), 8)]))
+        self.peripheral.writeCharacteristic(self.characteristicValueHandles['LED_MATRIX'], struct.pack('BBBBBBBBBBBBB', bytes[0], bytes[1], bytes[2], bytes[3], bytes[
+                                            4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], max(0, min(255, int(255.0 * brightness))), max(0, min(255, int(timeout * 10.0)))), True)
 
-def connect(strip, scanTimeout = 2, reconnectAttempts = 1, maxAttempts = 10):
+
+def connect(strip, scanTimeout=2, reconnectAttempts=1, maxAttempts=10):
     # Max attempts reached
     if reconnectAttempts > maxAttempts:
         print("Failed to connect after %d attempts" % maxAttempts)
@@ -225,7 +237,8 @@ def connect(strip, scanTimeout = 2, reconnectAttempts = 1, maxAttempts = 10):
 
     try:
         # Scanning for devices
-        print("Scanning for devices (%d / %d)" % (reconnectAttempts, maxAttempts))
+        print("Scanning for devices (%d / %d)" %
+              (reconnectAttempts, maxAttempts))
         scanner = Scanner()
         devices = scanner.scan(scanTimeout)
 
