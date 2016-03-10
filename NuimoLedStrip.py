@@ -134,12 +134,16 @@ class NuimoDelegate(DefaultDelegate):
         # Swipe to choose for color to change
         if direction == 0:
             self.nuimo.displayLedMatrix(self.ledStrings.getR(), 5)
+            self.nuimo.displayLedMatrix(self.ledStrings.getColorBar(self.strip.r), 255)
         if direction == 1:
             self.nuimo.displayLedMatrix(self.ledStrings.getG(), 5)
+            self.nuimo.displayLedMatrix(self.ledStrings.getColorBar(self.strip.g), 255)
         if direction == 2:
             self.nuimo.displayLedMatrix(self.ledStrings.getB(), 5)
+            self.nuimo.displayLedMatrix(self.ledStrings.getColorBar(self.strip.b), 255)
         if direction == 3:
             self.nuimo.displayLedMatrix(self.ledStrings.getA(), 5)
+            self.nuimo.displayLedMatrix(self.ledStrings.getColorBar(self.strip.a), 255)
 
     def onRotate(self, value):
         print ('rotate', value)
@@ -147,7 +151,7 @@ class NuimoDelegate(DefaultDelegate):
         newValue = self.strip.setColorValue(value)
 
         # Show on matrix
-        self.nuimo.displayLedMatrix(self.ledStrings.getColorBar(newValue), 2)
+        self.nuimo.displayLedMatrix(self.ledStrings.getColorBar(newValue), 255)
 
     def onButton(self, pressState):
         # On press 1 and 0 will be fired on the emulator
@@ -250,7 +254,7 @@ def connect(strip, scanTimeout = 2, reconnectAttempts = 1, maxAttempts = 10):
         print("Couldn't find a Nuimo.")
         connect(strip, scanTimeout + 1, reconnectAttempts + 1)
     except BTLEException:
-        print("Failed to connect to %s. Make sure to:\n  1. Run program as root (For Scanning and the Strip\n  2. Disable the Bluetooth device: hciconfig hci0 down\n  3. Enable the Bluetooth device: hciconfig hci0 up\n  4. Enable BLE: btmgmt le on\n" % nuimo.macAddress)
+        print("Failed to connect to %s. Make sure to:\n  1. Run program as root (For Scanning and the Strip)\n  2. Disable the Bluetooth device: hciconfig hci0 down\n  3. Enable the Bluetooth device: hciconfig hci0 up\n  4. Enable BLE: btmgmt le on\n" % nuimo.macAddress)
         connect(strip, scanTimeout + 1, reconnectAttempts + 1)
     except KeyboardInterrupt:
         print("Program aborted.")
