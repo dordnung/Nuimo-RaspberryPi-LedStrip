@@ -30,48 +30,70 @@ class Strip():
         self.a = 255
 
     def turnOff(self):
+        # Turn off all colors
         self.setLights(0, 0, 0, 0)
 
     def setLights(self, red, green, blue, brightness):
+        # Brightness has to be between 0 and 1
         realBrightness = float(brightness) / 255.0
 
+        # Configurate Pi pins
         self.pi.set_PWM_dutycycle(RED_PIN, red * realBrightness)
         self.pi.set_PWM_dutycycle(GREEN_PIN, green * realBrightness)
         self.pi.set_PWM_dutycycle(BLUE_PIN, blue * realBrightness)
 
-    def updateColor(self, color, value):
-        color += (value / 5)
+    def updateColor(self, currentValue, newValue):
+        # Add new value to current value
+        currentValue += (newValue / 5)
         
-        if color > 255:
+        # Shouldn't be higer then 255 or less then 0
+        if currentValue > 255:
             return 255
-        if color < 0:
+        if currentValue < 0:
             return 0
-            
-        return color
+        
+        return currentValue
 
     def setColorValue(self, value):
+        retValue = 0
+
+        # Update red color
         if self.color == 0:
             self.r = self.updateColor(self.r, value)
+            retValue = self.r
 
+        # Update green color
         if self.color == 1:
             self.g = self.updateColor(self.g, value)
+            retValue = self.g
 
+        # Update blue color
         if self.color == 2:
             self.b = self.updateColor(self.b, value)
+            retValue = self.b
 
+        # Update alpha / brightness
         if self.color == 3:
             self.a = self.updateColor(self.a, value)
-         
+            retValue = self.a
+
+        # Set the new color
         self.setLights(self.r, self.g, self.b, self.a)
 
-    def switch(self,):
+        return retValue
+
+    def switch(self):
+        # Turn off if currently enabled
         if self.isEnabled:
             self.turnOff()
         else:
+            # Otherwise turn on
             self.setLights(self.r, self.g, self.b, self.a)
 
+        # Change enabled value
         self.isEnabled = not self.isEnabled
 
+        return self.isEnabled
 
 
 class NuimoDelegate(DefaultDelegate):
@@ -98,12 +120,15 @@ class NuimoDelegate(DefaultDelegate):
             self.onButton(ord(data[0]))
 
     def onBattery(self, batteryState):
+        # Nothing to do here
         pass
 
     def onFly(self, direction, value):
+        # Nothing to do here
         pass
 
     def onSwipe(self, direction):
+        # Set color to change
         self.strip.color = direction
 
         # Swipe to choose for color to change
@@ -117,13 +142,21 @@ class NuimoDelegate(DefaultDelegate):
             self.nuimo.displayLedMatrix(self.ledStrings.getA(), 5)
 
     def onRotate(self, value):
-        self.strip.setColorValue(value)
+        print ('rotate', value)
+        # Update value
+        newValue = self.strip.setColorValue(value)
+
+        # Show on matrix
+        self.nuimo.displayLedMatrix(self.ledStrings.getColorBar(newValue), 2)
 
     def onButton(self, pressState):
         # On press 1 and 0 will be fired on the emulator
         if pressState == 1:
             # Turn on or off
-            self.strip.switch()
+            if self.strip.switch():
+                self.nuimo.displayLedMatrix(self.ledStrings.getOn(), 2)
+            else:
+                self.nuimo.displayLedMatrix(self.ledStrings.getOff(), 2)
 
 
 class Nuimo:
@@ -217,7 +250,7 @@ def connect(strip, scanTimeout = 2, reconnectAttempts = 1, maxAttempts = 10):
         print("Couldn't find a Nuimo.")
         connect(strip, scanTimeout + 1, reconnectAttempts + 1)
     except BTLEException:
-        print("Failed to connect to %s. Make sure to:\n  1. Disable the Bluetooth device: hciconfig hci0 down\n  2. Enable the Bluetooth device: hciconfig hci0 up\n  3. Enable BLE: btmgmt le on\n" % nuimo.macAddress)
+        print("Failed to connect to %s. Make sure to:\n  1. Run program as root (For Scanning and the Strip\n  2. Disable the Bluetooth device: hciconfig hci0 down\n  3. Enable the Bluetooth device: hciconfig hci0 up\n  4. Enable BLE: btmgmt le on\n" % nuimo.macAddress)
         connect(strip, scanTimeout + 1, reconnectAttempts + 1)
     except KeyboardInterrupt:
         print("Program aborted.")
