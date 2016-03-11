@@ -196,13 +196,16 @@ class NuimoDelegate(DefaultDelegate):
 
     def onRotate(self, value):
         if value < 0:
-            self.nuimo.rotateAngle -= 7
+            self.nuimo.rotateAngle -= 5
         else:
-            self.nuimo.rotateAngle += 7
+            self.nuimo.rotateAngle += 5
 
         self.nuimo.rotateAngle = self.nuimo.rotateAngle % 360
+        print('angle', self.nuimo.rotateAngle)
 
         colorAtAngle = self.nuimo.wheel.getColorAtAngle(self.nuimo.rotateAngle)
+        print('color', colorAtAngle)
+
         newValue = self.strip.setColorValues(
             colorAtAngle[0], colorAtAngle[1], colorAtAngle[2])
 
