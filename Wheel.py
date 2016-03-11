@@ -65,8 +65,8 @@ class Wheel:
                 self.colors[x][y] = color
 
     def getColorAtAngle(self, angle):
-        x = int(self.radius * math.cos(angle) + self.radius * 2)
-        y = int(self.radius * math.sin(angle) + self.radius * 2)
+        x = int(self.radius * math.cos(math.radians(angle)) + self.radius * 2)
+        y = int(self.radius * math.sin(math.radians(angle)) + self.radius * 2)
 
         return self.colors[x][y]
 
