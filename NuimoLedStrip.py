@@ -24,7 +24,7 @@ class Strip():
 
     def __init__(self, pi):
         self.pi = pi
-        self.isEnabled = False
+        self.isEnabled = True
         self.color = 0
         self.r = 0
         self.g = 0
