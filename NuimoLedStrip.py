@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 
+from LedMatrixString import LedMatrixString
+from Wheel import Wheel
 from bluepy.btle import Scanner, UUID, DefaultDelegate, Peripheral, BTLEException
 import itertools
 import struct
 import sys
 import time
 import pigpio
-import time
-from LedMatrixString import LedMatrixString
-from Wheel import Wheel
 if sys.version_info >= (3, 0):
     from functools import reduce
 
@@ -57,7 +56,7 @@ class Strip():
 
         return currentValue
 
-    def setColorValue(self, value):
+    def updateColorValue(self, value):
         retValue = 0
 
         if value < 0:
@@ -90,6 +89,34 @@ class Strip():
 
         return retValue
 
+    def setColorValues(self, r, g, b):
+        # Update red color
+        self.r = r
+
+        if self.r > 255:
+            self.r = 255
+        elif self.r < 0:
+            self.r = 0
+
+        # Update green color
+        self.g = g
+
+        if self.g > 255:
+            self.g = 255
+        elif self.g < 0:
+            self.g = 0
+
+        # Update blue color
+        self.b = b
+
+        if self.b > 255:
+            self.b = 255
+        elif self.b < 0:
+            self.b = 0
+
+        # Set the new color
+        self.setLights(self.r, self.g, self.b, self.a)
+
     def switch(self):
         # Turn off if currently enabled
         if self.isEnabled:
@@ -105,10 +132,10 @@ class Strip():
 
 
 class NuimoDelegate(DefaultDelegate):
+
     def __init__(self, nuimo, strip):
         DefaultDelegate.__init__(self)
         self.nuimo = nuimo
-        self.ledStrings = LedMatrixString()
         self.strip = strip
 
     def handleNotification(self, cHandle, data):
@@ -140,21 +167,21 @@ class NuimoDelegate(DefaultDelegate):
 
         # Swipe to choose for color to change
         if direction == 0:
-            self.nuimo.displayLedMatrix(self.ledStrings.getR(), 5)
+            self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getR(), 5)
             self.nuimo.displayLedMatrix(
-                self.ledStrings.getColorBar(self.strip.r), 255)
+                self.nuimo.ledStrings.getColorBar(self.strip.r), 255)
         if direction == 1:
-            self.nuimo.displayLedMatrix(self.ledStrings.getG(), 5)
+            self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getG(), 5)
             self.nuimo.displayLedMatrix(
-                self.ledStrings.getColorBar(self.strip.g), 255)
+                self.nuimo.ledStrings.getColorBar(self.strip.g), 255)
         if direction == 2:
-            self.nuimo.displayLedMatrix(self.ledStrings.getB(), 5)
+            self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getB(), 5)
             self.nuimo.displayLedMatrix(
-                self.ledStrings.getColorBar(self.strip.b), 255)
+                self.nuimo.ledStrings.getColorBar(self.strip.b), 255)
         if direction == 3:
-            self.nuimo.displayLedMatrix(self.ledStrings.getA(), 5)
+            self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getA(), 5)
             self.nuimo.displayLedMatrix(
-                self.ledStrings.getColorBar(self.strip.a), 255)
+                self.nuimo.ledStrings.getColorBar(self.strip.a), 255)
 
     """def onRotate(self, value):
         print ('rotate', value)
@@ -168,29 +195,25 @@ class NuimoDelegate(DefaultDelegate):
             self.nuimo.lastBar = bar"""
 
     def onRotate(self, value):
-        print ('rotate', value)
-
         if value < 0:
-            value = -7
+            self.nuimo.rotateAngle -= 7
         else:
-            value = 7
+            self.nuimo.rotateAngle += 7
 
-        self.nuimo.rotate = self.nuimo.rotate + value 
-        print ('rotate', self.nuimo.rotate)
-        self.w = Wheel()
-        a = self.w.paintWheelAndGetColorAtAngle(self.nuimo.rotate)
-        print ('color', a)
-        newValue = self.strip.setLights(a[0],a[1],a[2],255)
+        self.nuimo.rotateAngle = self.nuimo.rotateAngle % 360
 
+        colorAtAngle = self.nuimo.wheel.getColorAtAngle(self.nuimo.rotateAngle)
+        newValue = self.strip.setColorValues(
+            colorAtAngle[0], colorAtAngle[1], colorAtAngle[2])
 
     def onButton(self, pressState):
         # On press 1 and 0 will be fired on the emulator
         if pressState == 1:
             # Turn on or off
             if self.strip.switch():
-                self.nuimo.displayLedMatrix(self.ledStrings.getOn(), 2)
+                self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getOn(), 2)
             else:
-                self.nuimo.displayLedMatrix(self.ledStrings.getOff(), 2)
+                self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getOff(), 2)
 
 
 class Nuimo:
@@ -223,8 +246,10 @@ class Nuimo:
 
     def __init__(self, macAddress):
         self.macAddress = macAddress
+        self.wheel = Wheel(50)
+        self.ledStrings = LedMatrixString()
         self.lastBar = ""
-        self.rotate = 0
+        self.rotateAngle = 0
 
     def set_delegate(self, delegate):
         self.delegate = delegate
@@ -249,13 +274,11 @@ class Nuimo:
         self.peripheral.waitForNotifications(1.0)
 
     def displayLedMatrix(self, matrix, timeout, brightness=1.0):
-        start_time = time.time()
         matrix = '{:<81}'.format(matrix[:81])
         bytes = list(map(lambda leds: reduce(lambda acc, led: acc + (1 << led if leds[led] not in [
                      ' ', '0'] else 0), range(0, len(leds)), 0), [matrix[i:i + 8] for i in range(0, len(matrix), 8)]))
         self.peripheral.writeCharacteristic(self.characteristicValueHandles['LED_MATRIX'], struct.pack('BBBBBBBBBBBBB', bytes[0], bytes[1], bytes[2], bytes[3], bytes[
                                             4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], max(0, min(255, int(255.0 * brightness))), max(0, min(255, int(timeout * 10.0)))), True)
-        print("--- %s seconds ---" % (time.time() - start_time))
 
 
 def connect(strip, scanTimeout=2, reconnectAttempts=1, maxAttempts=10):
