@@ -1,5 +1,32 @@
 #!/usr/bin/env python
+
+from PIL import Image
+from PIL import ImageFont
+from PIL import ImageDraw
+
+
 class LedMatrixString:
+
+    def getFromLetter(self, letter, font, size, pos):
+        img = Image.new('RGB', (9, 9), "white")
+        draw = ImageDraw.Draw(img)
+        font = ImageFont.truetype(font, size)
+        draw.text(pos, letter[0], (0, 0, 0), font=font)
+        # img.show()
+        pixels = img.load()
+
+        ret = ''
+        for i in range(img.size[0]):
+            for j in range(img.size[1]):
+                if (pixels[j, i][0] < 135):
+                    ret += '*'
+                else:
+                    ret += ' '
+
+        return ret
+
+    def getArialLetter(self, letter):
+        return self.getFromLetter(letter, 'fonts/arial.ttf', 11, (1, -2))
 
     def getPi(self):
         return "         " + \
@@ -23,50 +50,6 @@ class LedMatrixString:
             "  *   *  " + \
             "   ***   "
 
-    def getR(self):
-        return "         " + \
-            "   ***   " + \
-            "   *  *  " + \
-            "   *  *  " + \
-            "   ***   " + \
-            "   **    " + \
-            "   * *   " + \
-            "   *  *  " + \
-            "         "
-
-    def getG(self):
-        return "         " + \
-            "    ***  " + \
-            "   *     " + \
-            "   *     " + \
-            "   * **  " + \
-            "   *  *  " + \
-            "   *  *  " + \
-            "    ***  " + \
-            "         "
-
-    def getB(self):
-        return "         " + \
-            "   ***   " + \
-            "   *  *  " + \
-            "   *  *  " + \
-            "   ***   " + \
-            "   *  *  " + \
-            "   *  *  " + \
-            "   ***   " + \
-            "         "
-
-    def getA(self):
-        return "         " + \
-            "    *    " + \
-            "   * *   " + \
-            "  *   *  " + \
-            "  *****  " + \
-            "  *   *  " + \
-            "  *   *  " + \
-            "  *   *  " + \
-            "         "
-
     def getOn(self):
         return "         " + \
             "    *    " + \
@@ -79,15 +62,7 @@ class LedMatrixString:
             "         "
 
     def getOff(self):
-        return "    *    " + \
-            "   * *   " + \
-            "  *   *  " + \
-            " *     * " + \
-            "*       *" + \
-            " *     * " + \
-            "  *   *  " + \
-            "   * *   " + \
-            "    *    "
+        return self.getFromLetter(u'\uf011', 'fonts/fontawesome-webfont.ttf', 9, (1, 0))
 
     def getColorBar(self, colorValue):
         bar = ""
@@ -118,5 +93,15 @@ class LedMatrixString:
 
 if __name__ == "__main__":
     LMS = LedMatrixString()
-    print(LMS.getA())
-    LMS.printMatrix(LMS.getA())
+
+    LMS.printMatrix(LMS.getArialLetter('R'))
+    LMS.printMatrix(LMS.getArialLetter('G'))
+    LMS.printMatrix(LMS.getArialLetter('B'))
+    LMS.printMatrix(LMS.getArialLetter('A'))
+    LMS.printMatrix(LMS.getOff())
+
+    LMS.printMatrix(LMS.getFromLetter(
+        u'\uf047', 'fonts/fontawesome-webfont.ttf', 9, (0, 0)))
+
+    LMS.printMatrix(LMS.getFromLetter(
+        u'\uf294', 'fonts/fontawesome-webfont.ttf', 10, (2, 0)))

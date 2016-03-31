@@ -167,19 +167,23 @@ class NuimoDelegate(DefaultDelegate):
 
         # Swipe to choose for color to change
         if direction == 0:
-            self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getR(), 5)
+            self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getArialLetter('R'), 5)
+            time.sleep(0.5)
             self.nuimo.displayLedMatrix(
                 self.nuimo.ledStrings.getColorBar(self.strip.r), 255)
         if direction == 1:
-            self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getG(), 5)
+            self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getArialLetter('G'), 5)
+            time.sleep(0.5)
             self.nuimo.displayLedMatrix(
                 self.nuimo.ledStrings.getColorBar(self.strip.g), 255)
         if direction == 2:
-            self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getB(), 5)
+            self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getArialLetter('B'), 5)
+            time.sleep(0.5)
             self.nuimo.displayLedMatrix(
                 self.nuimo.ledStrings.getColorBar(self.strip.b), 255)
         if direction == 3:
-            self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getA(), 5)
+            self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getArialLetter('A'), 5)
+            time.sleep(0.5)
             self.nuimo.displayLedMatrix(
                 self.nuimo.ledStrings.getColorBar(self.strip.a), 255)
 
