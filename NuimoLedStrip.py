@@ -163,55 +163,56 @@ class NuimoDelegate(DefaultDelegate):
 
     def onSwipe(self, direction):
         # Set color to change
-        self.strip.color = direction
+        if direction == 0:
+            self.strip.color = (self.strip.color - 1) % 5
+        elif direction == 1:
+            self.strip.color = (self.strip.color + 1) % 5
 
         # Swipe to choose for color to change
-        if direction == 0:
+        if self.strip.color == 0:
             self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getArialLetter('R'), 5)
             time.sleep(0.5)
             self.nuimo.displayLedMatrix(
                 self.nuimo.ledStrings.getColorBar(self.strip.r), 255)
-        if direction == 1:
+        if self.strip.color == 1:
             self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getArialLetter('G'), 5)
             time.sleep(0.5)
             self.nuimo.displayLedMatrix(
                 self.nuimo.ledStrings.getColorBar(self.strip.g), 255)
-        if direction == 2:
+        if self.strip.color == 2:
             self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getArialLetter('B'), 5)
             time.sleep(0.5)
             self.nuimo.displayLedMatrix(
                 self.nuimo.ledStrings.getColorBar(self.strip.b), 255)
-        if direction == 3:
+        if self.strip.color == 3:
             self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getArialLetter('A'), 5)
             time.sleep(0.5)
             self.nuimo.displayLedMatrix(
                 self.nuimo.ledStrings.getColorBar(self.strip.a), 255)
-
-    """def onRotate(self, value):
-        print ('rotate', value)
-        # Update value
-        newValue = self.strip.setColorValue(value)
-        bar = self.ledStrings.getColorBar(newValue)
-
-        if bar != self.nuimo.lastBar:
-            # Show on matrix
-            self.nuimo.displayLedMatrix(bar, 255)
-            self.nuimo.lastBar = bar"""
+        if self.strip.color == 4:
+            self.nuimo.displayLedMatrix(self.nuimo.ledStrings.getArialLetter('W', 10, (0, -1)), 255)
 
     def onRotate(self, value):
-        if value < 0:
-            self.nuimo.rotateAngle -= 5
+        if self.strip.color != 4:
+            # Update value
+            newValue = self.strip.updateColorValue(value)
+            bar = self.nuimo.ledStrings.getColorBar(newValue)
+
+            if bar != self.nuimo.lastBar:
+                # Show on matrix
+                self.nuimo.displayLedMatrix(bar, 255)
+                self.nuimo.lastBar = bar
         else:
-            self.nuimo.rotateAngle += 5
+            if value < 0:
+                self.nuimo.rotateAngle -= 5
+            else:
+                self.nuimo.rotateAngle += 5
 
-        self.nuimo.rotateAngle = self.nuimo.rotateAngle % 360
-        print('angle', self.nuimo.rotateAngle)
+            self.nuimo.rotateAngle = self.nuimo.rotateAngle % 360
 
-        colorAtAngle = self.nuimo.wheel.getColorAtAngle(self.nuimo.rotateAngle)
-        print('color', colorAtAngle)
-
-        newValue = self.strip.setColorValues(
-            colorAtAngle[0], colorAtAngle[1], colorAtAngle[2])
+            colorAtAngle = self.nuimo.wheel.getColorAtAngle(self.nuimo.rotateAngle)
+            newValue = self.strip.setColorValues(
+                colorAtAngle[0], colorAtAngle[1], colorAtAngle[2])
 
     def onButton(self, pressState):
         # On press 1 and 0 will be fired on the emulator

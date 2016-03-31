@@ -25,8 +25,8 @@ class LedMatrixString:
 
         return ret
 
-    def getArialLetter(self, letter):
-        return self.getFromLetter(letter, 'fonts/arial.ttf', 11, (1, -2))
+    def getArialLetter(self, letter, size=11, pos=(1, -2)):
+        return self.getFromLetter(letter, 'fonts/arial.ttf', size, pos)
 
     def getPi(self):
         return "         " + \
@@ -90,6 +90,7 @@ class LedMatrixString:
         print(">" + matrixStr[6 * 9:7 * 9] + "<")
         print(">" + matrixStr[7 * 9:8 * 9] + "<")
         print(">" + matrixStr[8 * 9:10 * 9] + "<")
+        print(" ")
 
 if __name__ == "__main__":
     LMS = LedMatrixString()
@@ -98,6 +99,7 @@ if __name__ == "__main__":
     LMS.printMatrix(LMS.getArialLetter('G'))
     LMS.printMatrix(LMS.getArialLetter('B'))
     LMS.printMatrix(LMS.getArialLetter('A'))
+    LMS.printMatrix(LMS.getArialLetter('W', 10, (0, -1)))
     LMS.printMatrix(LMS.getOff())
 
     LMS.printMatrix(LMS.getFromLetter(
